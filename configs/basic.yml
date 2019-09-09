@@ -1,0 +1,6 @@
+dataset: 
+    train_image_path: ../data/images/train/
+    test_image_path: ../data/images/test/
+    train_csv_path: ../data/train.csv
+    test_csv_path: ../data/test.csv
+
