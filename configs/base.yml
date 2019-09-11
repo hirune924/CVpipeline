@@ -5,4 +5,24 @@ dataset:
     test_csv_path: ../data/test.csv
 dataloader:
     batch_size: 64
+model:
+    model_name: resnet18
+    image_size: 256
+    num_classes: 120
+    pretrained: True
+optimizer:
+    opt_name: sgd
+    opt_params:
+        lr: 0.1
+        momentum: 0.9
+        dampening: 0.0
+        weight_decay: 0.0005
+        nesterov: True
+loss:
+    loss_name: CrossEntropyLoss
+    loss_params:
+        dummy: dummy
+
+
+
 
