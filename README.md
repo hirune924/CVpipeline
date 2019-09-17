@@ -1,8 +1,9 @@
 # CVpipeline
 
 ## Docker Image
-* docker pull hirune924/cuda-conda-deep
-
+```
+docker pull hirune924/cuda-conda-deep
+```
 # TODO
 * Apex
 * DALI, lmdb
