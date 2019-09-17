@@ -2,7 +2,7 @@
 
 ## Docker Image
 ```
-docker pull hirune924/cuda-conda-deep
+docker pull hirune924/cuda-conda-deep:latest
 ```
 # TODO
 * Apex
@@ -21,6 +21,6 @@ docker pull hirune924/cuda-conda-deep
 * add more metrics
 * add more optimizer
 * add more models
-
+* RAPIDS
 * optuna, BoTorch
 
