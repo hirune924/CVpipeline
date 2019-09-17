@@ -9,6 +9,7 @@
 * add tensorboard( and watch visdom)
 * add dataparallel
 * add data distribution data parallel
+* save model parameter
 * error handling
 * logger
 * lr scheduler(optimize for model params)
