@@ -1,8 +1,11 @@
 dataset: 
-    train_image_path: ../data/images/train/
-    test_image_path: ../data/images/test/
-    train_csv_path: ../data/trans-train.csv
-    test_csv_path: ../data/test.csv
+    train_image_path: ../data/images/train/ # str: must change for your case
+    test_image_path: ../data/images/test/ # str: must change for your case
+    train_csv_path: ../data/trans-train.csv # str: must change for your case
+    test_csv_path: ../data/test.csv # str: must change for your case
+    validation:
+        mode: auto # str: ['auto', 'manual']
+        nfold: 5 # currently use 1~n-1 fold for train, n fold for validate
 dataloader:
     batch_size: 64
 model:
@@ -22,7 +25,8 @@ loss:
     loss_name: CrossEntropyLoss
     loss_params:
         dummy: dummy
-
+train:
+    epoch: 20
 
 
 
