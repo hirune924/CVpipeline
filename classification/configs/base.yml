@@ -23,9 +23,9 @@ optimizer:
         dampening: 0.0
         weight_decay: 0.0005
         nesterov: True
-criterion:
-    criterion_name: CrossEntropyLoss
-    criterion_params:
+loss:
+    loss_name: CrossEntropyLoss
+    loss_params:
         dummy: dummy
 train:
     epoch: 20

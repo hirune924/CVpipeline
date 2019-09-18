@@ -22,7 +22,7 @@ except ImportError:
 from dataset.dataset import load_train_data
 from model.model import get_model_from_name
 from optimizer.optimizer import get_optimizer_from_name
-from criterion.criterion import get_criterion_from_name
+from loss.loss import get_loss_from_name
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.backends.cudnn.benchmark = True
@@ -131,11 +131,11 @@ def main(argv=None):
                                         model=model, 
                                         **opt_params)
 
-    # define criterion
-    criterion_options = config['criterion']
-    criterion_params = criterion_options['criterion_params'] if 'criterion_params' in criterion_options else {}
-    criterion = get_criterion_from_name(loss_name=criterion_options['criterion_name'],
-                                   **criterion_params)
+    # define loss
+    loss_options = config['loss']
+    loss_params = loss_options['loss_params'] if 'loss_params' in loss_options else {}
+    loss_fn = get_loss_from_name(loss_name=loss_options['loss_name'],
+                                   **loss_params)
 
     # Mixed Precision
     amp_options = config['amp']
@@ -148,8 +148,8 @@ def main(argv=None):
         model = nn.DataParallel(model)
 
     for e in range(config['train']['epoch']):
-        train_loss, train_acc = train_loop(model, train_data_loader, criterion, optimizer, amp=use_amp)
-        valid_loss, valid_acc = valid_loop(model, valid_data_loader, criterion)
+        train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, amp=use_amp)
+        valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
         print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e + 1, train_loss, train_acc, valid_loss, valid_acc))
 
 if __name__ == '__main__':
