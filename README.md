@@ -6,9 +6,10 @@ docker pull hirune924/cuda-conda-deep:latest
 ```
 # TODO
 - [x] Apex
-- [ ] DALI, lmdb
+- [ ] DALI
+- [x] lmdb
 - [ ] add tensorboard( and watch visdom)
-- [ ] add dataparallel
+- [x] add dataparallel
 - [ ] add data distribution data parallel
 - [ ] save model parameter
 - [ ] error handling
