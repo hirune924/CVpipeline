@@ -6,11 +6,12 @@ import json
 
 from absl import flags, app
 from tqdm import tqdm
+from torchsummary import summary as tsummary
 
 from dataset.dataset import load_train_data
 from model.model import get_model_from_name
 from optimizer.optimizer import get_optimizer_from_name
-from loss.loss import get_loss_from_name
+from criterion.criterion import get_criterion_from_name
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -98,6 +99,7 @@ def main(argv=None):
                                 num_classes=config['model']['num_classes'],
                                 pretrained=True)
     model = model.to(DEVICE)
+    tsummary(model, (config['model']['channel_size'] ,config['model']['image_size'], config['model']['image_size']))
 
     opt_params = config['optimizer']['opt_params'] if 'opt_params' in config['optimizer'] else {}
     optimizer = get_optimizer_from_name(opt_name=config['optimizer']['opt_name'], 
@@ -105,7 +107,7 @@ def main(argv=None):
                                         **opt_params)
 
     loss_params = config['loss']['loss_params'] if 'loss_params' in config['loss'] else {}
-    criterion = get_loss_from_name(loss_name=config['loss']['loss_name'],
+    criterion = get_criterion_from_name(loss_name=config['loss']['loss_name'],
                                    **loss_params)
 
     for e in range(config['train']['epoch']):

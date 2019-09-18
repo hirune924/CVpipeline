@@ -3,7 +3,7 @@
 
 import torch.nn as nn
 
-def get_loss_from_name(loss_name=None, **kwargs):
+def get_criterion_from_name(loss_name=None, **kwargs):
 
     if loss_name == 'CrossEntropyLoss':
         weight = kwargs['weight'] if 'weight' in kwargs else None
