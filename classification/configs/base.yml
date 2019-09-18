@@ -14,6 +14,7 @@ model:
     channel_size: 3
     num_classes: 120
     pretrained: True
+    dataparallel: True
 optimizer:
     opt_name: sgd
     opt_params:
@@ -22,12 +23,15 @@ optimizer:
         dampening: 0.0
         weight_decay: 0.0005
         nesterov: True
-loss:
-    loss_name: CrossEntropyLoss
-    loss_params:
+criterion:
+    criterion_name: CrossEntropyLoss
+    criterion_params:
         dummy: dummy
 train:
     epoch: 20
+amp:
+    use_amp: True
+    opt_level: O1
 
 
 

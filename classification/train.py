@@ -1,12 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import sys
 import torch
+import torch.nn as nn
 import yaml
 import json
 
 from absl import flags, app
 from tqdm import tqdm
-from torchsummary import summary as tsummary
+
+try:
+    from torchsummary import summary as tsummary
+except ImportError:
+    print('[WARNING] {} module is not installed'.format('torchsummary'))
+
+try:
+    from apex import amp
+except ImportError:
+    print('[WARNING] {} module is not installed'.format('apex'))
 
 from dataset.dataset import load_train_data
 from model.model import get_model_from_name
@@ -14,12 +25,13 @@ from optimizer.optimizer import get_optimizer_from_name
 from criterion.criterion import get_criterion_from_name
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.backends.cudnn.benchmark = True
 
 flags.DEFINE_string('config_path', default='configs/base.yml', help='path to config file', short_name='c')
 FLAGS = flags.FLAGS
 
 
-def train_loop(model, loader, criterion, optimizer):
+def train_loop(model, loader, criterion, optimizer, amp=False):
     model.train()
     bar = tqdm(total=len(loader), leave=False)
     total_loss, total_acc, total_num = 0, 0, 0
@@ -34,10 +46,13 @@ def train_loop(model, loader, criterion, optimizer):
         # initialize gradient
         optimizer.zero_grad()
         # Backward
-        loss.backward()
+        if amp:
+            with amp.scale_loss(loss, optimizer, loss_id=0) as scaled_loss:
+                scaled_loss.backward()
+        else:
+            loss.backward()
         # Update Params
         optimizer.step()
-        # Update bar
         ## Accuracy
         pred = outputs.data.max(1, keepdim=True)[1]
         acc = pred.eq(labels.data.view_as(pred)).sum()
@@ -45,6 +60,7 @@ def train_loop(model, loader, criterion, optimizer):
         total_loss += loss.item() * labels.size(0)
         total_acc += acc.item()
         total_num += labels.size(0)
+        # Update bar
         bar.set_description("Loss: {:.4f}, Accuracy: {:.2f}".format(
             total_loss / total_num, total_acc / total_num * 100), refresh=True)
         bar.update()
@@ -65,7 +81,6 @@ def valid_loop(model, loader, criterion):
             outputs = model(inputs)
             # Calcurate Loss
             loss = criterion(outputs, labels)
-            # Update bar
             ## Accuracy
             pred = outputs.data.max(1, keepdim=True)[1]
             acc = pred.eq(labels.data.view_as(pred)).sum()
@@ -73,7 +88,7 @@ def valid_loop(model, loader, criterion):
             total_loss += loss.item() * labels.size(0)
             total_acc += acc.item()
             total_num += labels.size(0)
-
+            # Update bar
             bar.set_description("Loss: {:.4f}, Accuracy: {:.2f}".format(
                 total_loss / total_num, total_acc / total_num * 100), refresh=True)
             bar.update()
@@ -88,30 +103,52 @@ def main(argv=None):
     print('Configs overview:')
     print(json.dumps(config, indent=2))
 
-    train_data_loader, valid_data_loader = load_train_data(data_path=config['dataset']['train_image_path'],
-                                                           csv_path=config['dataset']['train_csv_path'],
-                                                           batch_size=config['dataloader']['batch_size'],
-                                                           valid_mode=config['dataset']['validation']['mode'],
-                                                           nfold=config['dataset']['validation']['nfold'])
+    # define dataloader
+    dataset_options = config['dataset']
+    dataloader_options = config['dataloader']
+    train_data_loader, valid_data_loader = load_train_data(data_path=dataset_options['train_image_path'],
+                                                           csv_path=dataset_options['train_csv_path'],
+                                                           batch_size=dataloader_options['batch_size'],
+                                                           valid_mode=dataset_options['validation']['mode'],
+                                                           nfold=dataset_options['validation']['nfold'])
     
-    model = get_model_from_name(model_name=config['model']['model_name'],
-                                image_size=config['model']['image_size'],
-                                num_classes=config['model']['num_classes'],
-                                pretrained=True)
+    # define model
+    model_options = config['model']
+    model = get_model_from_name(model_name=model_options['model_name'],
+                                image_size=model_options['image_size'],
+                                num_classes=model_options['num_classes'],
+                                pretrained=model_options['pretrained'])
     model = model.to(DEVICE)
-    tsummary(model, (config['model']['channel_size'] ,config['model']['image_size'], config['model']['image_size']))
+    if 'torchsummary' in sys.modules:
+        num_channels = model_options['channel_size']
+        image_size = model_options['image_size']
+        tsummary(model, (num_channels, image_size, image_size))
 
-    opt_params = config['optimizer']['opt_params'] if 'opt_params' in config['optimizer'] else {}
-    optimizer = get_optimizer_from_name(opt_name=config['optimizer']['opt_name'], 
+    # define optimizer
+    opt_options = config['optimizer']
+    opt_params = opt_options['opt_params'] if 'opt_params' in opt_options else {}
+    optimizer = get_optimizer_from_name(opt_name=opt_options['opt_name'], 
                                         model=model, 
                                         **opt_params)
 
-    loss_params = config['loss']['loss_params'] if 'loss_params' in config['loss'] else {}
-    criterion = get_criterion_from_name(loss_name=config['loss']['loss_name'],
-                                   **loss_params)
+    # define criterion
+    criterion_options = config['criterion']
+    criterion_params = criterion_options['criterion_params'] if 'criterion_params' in criterion_options else {}
+    criterion = get_criterion_from_name(loss_name=criterion_options['criterion_name'],
+                                   **criterion_params)
+
+    # Mixed Precision
+    amp_options = config['amp']
+    use_amp = 'amp' in sys.modules and amp_options['use_amp']
+    if use_amp:
+        model, optimizer = amp.initialize(model, optimizer, opt_level=amp_options['opt_level'], num_losses=1)
+        if model_options['dataparallel']:
+            model = nn.DataParallel(model)
+    elif model_options['dataparallel']:
+        model = nn.DataParallel(model)
 
     for e in range(config['train']['epoch']):
-        train_loss, train_acc = train_loop(model, train_data_loader, criterion, optimizer)
+        train_loss, train_acc = train_loop(model, train_data_loader, criterion, optimizer, amp=use_amp)
         valid_loss, valid_acc = valid_loop(model, valid_data_loader, criterion)
         print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e + 1, train_loss, train_acc, valid_loss, valid_acc))
 
