@@ -4,7 +4,13 @@
 ```
 docker pull hirune924/cuda-conda-deep:latest
 ```
-# TODO
+## Get Started
+```
+git clone https://github.com/hirune924/CVpipeline.git
+cd CVpipeline
+bash docker-run.sh
+``` 
+## TODO
 - [x] Apex
 - [x] DALI (Limited function version)
 - [x] lmdb
