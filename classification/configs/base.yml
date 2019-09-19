@@ -1,5 +1,5 @@
 dataset: 
-    mode: basic # str: ['basic', 'lmdb', 'dali']
+    mode: dali # str: ['basic', 'lmdb', 'dali']
     train_csv_path: data/trans-train.csv # str: must change for your case
     train_image_path: data/images/train/ # str: option for basic or dali mode
     lmdb_path: data/test-lmdb # str: option for lmdb mode

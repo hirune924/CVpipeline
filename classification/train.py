@@ -19,7 +19,7 @@ try:
 except ImportError:
     print('[WARNING] {} module is not installed'.format('apex'))
 
-from dataset.dataset import load_data
+from dataset.dataset import load_data, DALIDataLoader
 from model.model import get_model_from_name
 from optimizer.optimizer import get_optimizer_from_name
 from loss.loss import get_loss_from_name
@@ -106,13 +106,19 @@ def main(argv=None):
     # define dataloader
     dataset_options = config['dataset']
     dataloader_options = config['dataloader']
-    train_data_loader, valid_data_loader = load_data(data_path=dataset_options['train_image_path'],
-                                                           csv_path=dataset_options['train_csv_path'],
-                                                           batch_size=dataloader_options['batch_size'],
-                                                           valid_mode=dataset_options['validation']['mode'],
-                                                           nfold=dataset_options['validation']['nfold'],
-                                                           mode=dataset_options['mode'],
-                                                           lmdb_path=dataset_options['lmdb_path'])
+    if dataset_options['mode'] == 'dali':
+       train_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
+                                          data_path = dataset_options['train_image_path'], valid=False, nfold=0) 
+       valid_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
+                                          data_path = dataset_options['train_image_path'], valid=False, nfold=0) 
+    else:
+        train_data_loader, valid_data_loader = load_data(data_path=dataset_options['train_image_path'],
+                                                               csv_path=dataset_options['train_csv_path'],
+                                                               batch_size=dataloader_options['batch_size'],
+                                                               valid_mode=dataset_options['validation']['mode'],
+                                                               nfold=dataset_options['validation']['nfold'],
+                                                               mode=dataset_options['mode'],
+                                                               lmdb_path=dataset_options['lmdb_path'])
     
     # define model
     model_options = config['model']
