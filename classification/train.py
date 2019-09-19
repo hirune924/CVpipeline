@@ -19,7 +19,8 @@ try:
 except ImportError:
     print('[WARNING] {} module is not installed'.format('apex'))
 
-from dataset.dataset import load_data, DALIDataLoader
+from dataset.dataset import load_data
+from dataset.dalidataset import DALIDataLoader
 from model.model import get_model_from_name
 from optimizer.optimizer import get_optimizer_from_name
 from loss.loss import get_loss_from_name
@@ -108,9 +109,13 @@ def main(argv=None):
     dataloader_options = config['dataloader']
     if dataset_options['mode'] == 'dali':
        train_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
-                                          data_path = dataset_options['train_image_path'], valid=False, nfold=0) 
+                                          data_path = dataset_options['train_image_path'],
+                                          batch_size=dataloader_options['batch_size'], valid=False,
+                                          nfold=dataset_options['validation']['nfold']) 
        valid_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
-                                          data_path = dataset_options['train_image_path'], valid=False, nfold=0) 
+                                          data_path = dataset_options['train_image_path'],
+                                          batch_size=dataloader_options['batch_size'], valid=True,
+                                           nfold=dataset_options['validation']['nfold']) 
     else:
         train_data_loader, valid_data_loader = load_data(data_path=dataset_options['train_image_path'],
                                                                csv_path=dataset_options['train_csv_path'],
