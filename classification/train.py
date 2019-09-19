@@ -122,9 +122,8 @@ def main(argv=None):
                                 pretrained=model_options['pretrained'])
     model = model.to(DEVICE)
     if 'torchsummary' in sys.modules:
-        num_channels = model_options['channel_size']
         image_size = model_options['image_size']
-        tsummary(model, (num_channels, image_size, image_size))
+        tsummary(model, tuple(image_size))
 
     # define optimizer
     opt_options = config['optimizer']

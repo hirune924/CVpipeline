@@ -1,19 +1,16 @@
 dataset: 
     mode: basic # str: ['basic', 'lmdb', 'dali']
-    train_image_path: data/images/train/ # str: must change for your case
-    test_image_path: data/images/test/ # str: must change for your case
     train_csv_path: data/trans-train.csv # str: must change for your case
-    test_csv_path: data/test.csv # str: must change for your case
-    lmdb_path: data/test-lmdb
+    train_image_path: data/images/train/ # str: option for basic or dali mode
+    lmdb_path: data/test-lmdb # str: option for lmdb mode
     validation:
         mode: auto # str: ['auto', 'manual']
         nfold: 5 # currently use 1~n-1 fold for train, n fold for validate
 dataloader:
-    batch_size: 256
+    batch_size: 64
 model:
     model_name: resnet18
-    image_size: 256
-    channel_size: 3
+    image_size: [3, 256, 256] # [C, H, W]
     num_classes: 120
     pretrained: True
     dataparallel: True
