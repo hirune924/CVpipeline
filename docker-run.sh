@@ -2,7 +2,7 @@ docker pull hirune924/cuda-conda-deep:latest
 
 cur_path=$(cd $(dirname $0) && pwd)
 mnt_path=${cur_path}
-mnt_target='/root'
+mnt_target='/home'
 
 ## visible gpus
 nvidia_visible_devices='all'
@@ -19,7 +19,7 @@ time nvidia-docker run \
 	-p 80:80 \
 	-p 8888:8888 \
 	-v ${mnt_path}:${mnt_target} \
-	-w /root \
+	-w /home \
 	-v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY \
 	-it --rm hirune924/cuda-conda-deep:latest
 
