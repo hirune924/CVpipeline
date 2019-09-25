@@ -163,9 +163,7 @@ def main(argv=None):
     use_amp = 'amp' in sys.modules and amp_options['use_amp']
     if use_amp:
         model, optimizer = amp.initialize(model, optimizer, opt_level=amp_options['opt_level'], num_losses=1)
-        if model_options['dataparallel']:
-            model = nn.DataParallel(model)
-    elif model_options['dataparallel']:
+    if model_options['dataparallel']:
         model = nn.DataParallel(model)
 
 
@@ -183,7 +181,6 @@ def main(argv=None):
         writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
         writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
 
-    writer.flush()
     writer.close()
 
 if __name__ == '__main__':
