@@ -1,5 +1,5 @@
 dataset: 
-    mode: dali # str: ['basic', 'lmdb', 'dali'] (dali mode is under development)
+    mode: basic # str: ['basic', 'lmdb', 'dali'] (dali mode is under development)
     train_csv_path: data/trans-train.csv # str: must change for your case
     train_image_path: data/images/train/ # str: option for basic or dali mode
     lmdb_path: data/test-lmdb # str: option for lmdb mode
@@ -24,8 +24,7 @@ optimizer:
         nesterov: True
 loss:
     loss_name: CrossEntropyLoss
-    loss_params:
-        dummy: dummy
+    loss_params: {}
 train:
     epoch: 20
 amp:
