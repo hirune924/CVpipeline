@@ -5,9 +5,12 @@ import torch
 import torch.nn as nn
 import yaml
 import json
+import datetime
 
 from absl import flags, app
 from tqdm import tqdm
+
+from torch.utils.tensorboard import SummaryWriter
 
 try:
     from torchsummary import summary as tsummary
@@ -104,6 +107,10 @@ def main(argv=None):
     print('Configs overview:')
     print(json.dumps(config, indent=2))
 
+    # define SummaryWriter for tensorboard
+    writer = SummaryWriter(log_dir=config['tensorboard']['log_dir'] + '-' + str(datetime.datetime.now()))
+    writer.add_text('config', json.dumps(config, indent=2))
+
     # define dataloader
     dataset_options = config['dataset']
     dataloader_options = config['dataloader']
@@ -131,9 +138,11 @@ def main(argv=None):
                                 image_size=model_options['image_size'],
                                 num_classes=model_options['num_classes'],
                                 pretrained=model_options['pretrained'])
+    # for tensorboard and torchsummary
+    image_size = model_options['image_size']
+    writer.add_graph(model, torch.zeros(image_size).unsqueeze(dim=0))
     model = model.to(DEVICE)
     if 'torchsummary' in sys.modules:
-        image_size = model_options['image_size']
         tsummary(model, tuple(image_size))
 
     # define optimizer
@@ -159,10 +168,23 @@ def main(argv=None):
     elif model_options['dataparallel']:
         model = nn.DataParallel(model)
 
-    for e in range(config['train']['epoch']):
+
+
+    for e in range(1, config['train']['epoch'] + 1):
         train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, amp=use_amp)
+        writer.add_scalar('Train/Loss', train_loss, e)
+        writer.add_scalar('Train/Accuracy', train_acc, e)
+
         valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
-        print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e + 1, train_loss, train_acc, valid_loss, valid_acc))
+        writer.add_scalar('Validation/Loss', valid_loss, e)
+        writer.add_scalar('Validation/Accuracy', valid_acc, e)
+
+        print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
+        writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
+        writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
+
+    writer.flush()
+    writer.close()
 
 if __name__ == '__main__':
     app.run(main)

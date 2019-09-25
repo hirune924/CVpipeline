@@ -30,6 +30,8 @@ train:
 amp:
     use_amp: True
     opt_level: O1
+tensorboard:
+    log_dir: logs/test
 
 
 

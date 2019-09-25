@@ -14,7 +14,7 @@ bash docker-run.sh
 - [x] Apex
 - [x] DALI (Limited function version)
 - [x] lmdb
-- [ ] add tensorboard( and watch visdom)
+- [x] add tensorboard( and watch visdom)
 - [x] add dataparallel
 - [ ] add data distribution data parallel
 - [ ] save model parameter
