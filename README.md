@@ -18,7 +18,7 @@ bash docker-run.sh
 - [x] add tensorboard( and watch visdom)
 - [x] add dataparallel
 - [x] save model parameter
-- [ ] add DataAugmentation
+- [x] add DataAugmentation
 - [ ] lr scheduler(optimize for model params)
 - [ ] error handling
 - [ ] logger
