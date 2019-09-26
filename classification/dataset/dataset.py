@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
+import albumentations as A
 import pandas as pd
 import numpy as np
 import os
@@ -20,12 +22,32 @@ def worker_init_fn(worker_id):
     np.random.seed(np.random.get_state()[1][0] + worker_id)
     random.seed(worker_id)
 
+def get_transforms(trans_list=[], trans_lib='torchvision', mode='yaml'):
+    if trans_lib=='torchvision':
+        lib = transforms
+    elif trans_lib=='albumentations':
+        lib = A
+
+    if mode=='yaml':
+        trans = [ getattr(lib, trans_dict['name'])(**trans_dict['params']) for trans_dict in trans_list]
+    elif mode=='custom':
+        if trans_lib=='torchvision':
+            trans = [transforms.Resize((224, 224)),
+                     transforms.ToTensor(),
+                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))] 
+        elif trans_lib=='albumentations':
+            trans = [A.Resize(height=h, width=w, interpolation=1, always_apply=False, p=1),
+                     A.Flip(always_apply=False, p=0.75),
+                     A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225), max_pixel_value=255.0, always_apply=False, p=1.0)]        
+    return lib.Compose(trans)
+
 class BasicDataset(Dataset):
-    def __init__(self, csv_path, data_path, transform=None, valid=False, nfold=0):
+    def __init__(self, csv_path, data_path, transform=None, trans_lib='torchvision', valid=False, nfold=0):
         self.data_path = data_path
         self.csv_file = csv_path
         self.data = pd.read_csv(self.csv_file)
         self.transform = transform
+        self.trans_lib = trans_lib
 
         if nfold > 0:
             self.data = self.data.sort_values(by=['image', 'label'])
@@ -41,23 +63,31 @@ class BasicDataset(Dataset):
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.data_path, self.data.loc[idx, 'image'])
-        image = Image.open(img_name)
-
         label = self.data.loc[idx, 'label']
+        if self.trans_lib=='torchvision':
+            image = Image.open(img_name)
 
-        if self.transform is not None:
-            image = self.transform(image)
+            if self.transform is not None:
+                image = self.transform(image)
+        elif self.trans_lib=='albumentations':
+            image = cv2.imread(img_name)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            if self.transform is not None:
+                image = self.transform(image=image)
+            image = torch.from_numpy(image['image'].transpose(2, 0, 1))
+            
 
         return image, label
 
 
 class LMDBDataset(Dataset):
-    def __init__(self, csv_path, lmdb_path, transform=None, valid=False, nfold=0):
+    def __init__(self, csv_path, lmdb_path, transform=None, trans_lib='torchvision', valid=False, nfold=0):
         self.lmdb_path = lmdb_path
         self.env = lmdb.open(self.lmdb_path, max_readers=32, readonly=True, lock=False, readahead=False, meminit=False)
         self.csv_file = csv_path
         self.data = pd.read_csv(self.csv_file)
         self.transform = transform
+        self.trans_lib = trans_lib
 
         if nfold > 0:
             self.data = self.data.sort_values(by=['image', 'label'])
@@ -84,16 +114,23 @@ class LMDBDataset(Dataset):
         with self.env.begin(write=False) as txn:
             cv2_row = pickle.loads(txn.get(key.encode('utf-8')))
 
-        image = Image.fromarray(cv2.cvtColor(cv2_row, cv2.COLOR_BGR2RGB))
-
         label = self.data.loc[idx, 'label']
-        if self.transform is not None:
-            image = self.transform(image)
+        if self.trans_lib=='torchvision':
+            image = Image.fromarray(cv2.cvtColor(cv2_row, cv2.COLOR_BGR2RGB))
+
+            if self.transform is not None:
+                image = self.transform(image)
+
+        elif self.trans_lib=='albumentations':
+            image = cv2.cvtColor(cv2_row, cv2.COLOR_BGR2RGB)
+            if self.transform is not None:
+                image = self.transform(image=image)
+            image = torch.from_numpy(image['image'].transpose(2, 0, 1))
 
         return image, label
 
 
-def load_data(csv_path, data_path, batch_size, valid_mode='auto', nfold=0, mode='basic', lmdb_path=None):
+def load_data(csv_path, data_path, batch_size, train_trans_list=[], valid_trans_list=[], trans_mode='yaml', trans_lib='torchvision', valid_mode='auto', nfold=0, mode='basic', lmdb_path=None):
     if mode == 'basic':
         dataset = BasicDataset
     elif mode == 'lmdb':
@@ -101,35 +138,28 @@ def load_data(csv_path, data_path, batch_size, valid_mode='auto', nfold=0, mode=
         data_path = lmdb_path
 
    
-    train_transform = transforms.Compose([
-                        transforms.Resize((224, 224)),
-                        transforms.RandomHorizontalFlip(),
-                        transforms.ToTensor(),
-                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    valid_transform = transforms.Compose([
-                        transforms.Resize((224, 224)),
-                        transforms.ToTensor(),
-                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    train_transform = get_transforms(train_trans_list, trans_lib, trans_mode)
+    valid_transform = get_transforms(valid_trans_list, trans_lib, trans_mode)
     if valid_mode == 'auto':
         train_data_loader = DataLoader(
                 dataset(csv_path, data_path,
-                    transform=train_transform, valid=False, nfold=nfold),
+                    transform=train_transform, trans_lib=trans_lib, valid=False, nfold=nfold),
                 batch_size=batch_size, shuffle=True, num_workers=8, worker_init_fn=worker_init_fn, drop_last=False)
 
         valid_data_loader = DataLoader(
                 dataset(csv_path, data_path,
-                    transform=valid_transform, valid=True, nfold=nfold),
+                    transform=valid_transform, trans_lib=trans_lib, valid=True, nfold=nfold),
                 batch_size=batch_size, shuffle=False, num_workers=8, worker_init_fn=worker_init_fn, drop_last=False)
 
     elif valid_mode == 'manual':
         train_data_loader = DataLoader(
                 dataset(csv_path, data_path,
-                    transform=train_transform, valid=False, nfold=0),
+                    transform=train_transform, trans_lib=trans_lib, valid=False, nfold=0),
                 batch_size=batch_size, shuffle=True, num_workers=8, worker_init_fn=worker_init_fn, drop_last=False)
 
         valid_data_loader = DataLoader(
                 dataset(csv_path, data_path,
-                    transform=valid_transform, valid=False, nfold=0),
+                    transform=valid_transform, trans_lib=trans_lib, valid=False, nfold=0),
                 batch_size=batch_size, shuffle=False, num_workers=8, worker_init_fn=worker_init_fn, drop_last=False)
     else:
         print('valid mode {} is not implimented'.format(mode, valid))

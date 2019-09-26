@@ -11,6 +11,7 @@ cd CVpipeline
 bash docker-run.sh
 ``` 
 ## TODO
+- [ ] [Docker] tb-nightly pytorch-nightly alb(latest) 
 - [x] Apex
 - [x] DALI (Limited function version)
 - [x] lmdb

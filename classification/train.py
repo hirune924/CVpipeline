@@ -67,6 +67,10 @@ def main(argv=None):
         train_data_loader, valid_data_loader = load_data(data_path=dataset_options['train_image_path'],
                                                                csv_path=dataset_options['train_csv_path'],
                                                                batch_size=dataloader_options['batch_size'],
+                                                               train_trans_list=dataloader_options['data_augment']['train_trans'],
+                                                               valid_trans_list=dataloader_options['data_augment']['valid_trans'],
+                                                               trans_mode=dataloader_options['data_augment']['mode'],
+                                                               trans_lib=dataloader_options['data_augment']['lib'],
                                                                valid_mode=dataset_options['validation']['mode'],
                                                                nfold=dataset_options['validation']['nfold'],
                                                                mode=dataset_options['mode'],
@@ -118,14 +122,17 @@ def main(argv=None):
     
     best_val_acc = 0
     for e in range(1, config['train']['epoch'] + 1):
+        # Training
         train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, use_amp=use_amp)
         writer.add_scalar('Train/Loss', train_loss, e)
         writer.add_scalar('Train/Accuracy', train_acc, e)
 
+        # Validation
         valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
         writer.add_scalar('Validation/Loss', valid_loss, e)
         writer.add_scalar('Validation/Accuracy', valid_acc, e)
 
+        # Summary
         print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
         writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
         writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)

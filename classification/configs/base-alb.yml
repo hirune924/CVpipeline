@@ -10,21 +10,17 @@ dataloader:
     batch_size: 64
     data_augment:
         mode: yaml # str: ['yaml', 'custom']
-        lib: torchvision # str: ['torchvision', 'albumentations']
+        lib: albumentations # str: ['torchvision', 'albumentations']
         train_trans:
             - name: Resize
-              params: {'size': [224,224]}
-            - name: RandomHorizontalFlip
-              params: {}
-            - name: ToTensor
-              params: {}
+              params: {'height': 224, 'width': 224}
+            - name: Flip
+              params: {'p': 0.75}
             - name: Normalize
               params: {'mean': [0.5, 0.5, 0.5], 'std': [0.5, 0.5, 0.5]}
         valid_trans:
             - name: Resize
-              params: {'size': [224,224]}
-            - name: ToTensor
-              params: {}
+              params: {'height': 224, 'width': 224}
             - name: Normalize
               params: {'mean': [0.5, 0.5, 0.5], 'std': [0.5, 0.5, 0.5]}
 model:
