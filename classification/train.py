@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 import sys
 import torch
 import torch.nn as nn
@@ -22,6 +23,7 @@ try:
 except ImportError:
     print('[WARNING] {} module is not installed'.format('apex'))
 
+from functions import train_loop, valid_loop, save_params
 from dataset.dataset import load_data
 from dataset.dalidataset import DALIDataLoader
 from model.model import get_model_from_name
@@ -29,75 +31,12 @@ from optimizer.optimizer import get_optimizer_from_name
 from loss.loss import get_loss_from_name
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DATETIME = datetime.datetime.now()
 torch.backends.cudnn.benchmark = True
 
 flags.DEFINE_string('config_path', default='configs/base.yml', help='path to config file', short_name='c')
 FLAGS = flags.FLAGS
 
-
-def train_loop(model, loader, criterion, optimizer, amp=False):
-    model.train()
-    bar = tqdm(total=len(loader), leave=False)
-    total_loss, total_acc, total_num = 0, 0, 0
-    for idx, feed in enumerate(loader):
-        # Prepare data
-        inputs, labels = feed
-        inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
-        # Foward
-        outputs = model(inputs)
-        # Calcurate Loss
-        loss = criterion(outputs, labels)
-        # initialize gradient
-        optimizer.zero_grad()
-        # Backward
-        if amp:
-            with amp.scale_loss(loss, optimizer, loss_id=0) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            loss.backward()
-        # Update Params
-        optimizer.step()
-        ## Accuracy
-        pred = outputs.data.max(1, keepdim=True)[1]
-        acc = pred.eq(labels.data.view_as(pred)).sum()
-        ## Calcurate Score
-        total_loss += loss.item() * labels.size(0)
-        total_acc += acc.item()
-        total_num += labels.size(0)
-        # Update bar
-        bar.set_description("Loss: {:.4f}, Accuracy: {:.2f}".format(
-            total_loss / total_num, total_acc / total_num * 100), refresh=True)
-        bar.update()
-    bar.close()
-    return total_loss / total_num, total_acc / total_num * 100
-
-def valid_loop(model, loader, criterion):
-    model.eval()
-    total_loss, total_acc, total_num = 0, 0, 0
-    bar = tqdm(loader, total=len(loader), leave=False)
-    for i, feed in enumerate(loader):
-        with torch.no_grad():
-            # Prepare data
-            inputs, labels = feed
-            inputs = inputs.cuda()
-            labels = labels.cuda()
-            # Foward
-            outputs = model(inputs)
-            # Calcurate Loss
-            loss = criterion(outputs, labels)
-            ## Accuracy
-            pred = outputs.data.max(1, keepdim=True)[1]
-            acc = pred.eq(labels.data.view_as(pred)).sum()
-            ## Calcurate Score
-            total_loss += loss.item() * labels.size(0)
-            total_acc += acc.item()
-            total_num += labels.size(0)
-            # Update bar
-            bar.set_description("Loss: {:.4f}, Accuracy: {:.2f}".format(
-                total_loss / total_num, total_acc / total_num * 100), refresh=True)
-            bar.update()
-    bar.close()
-    return total_loss / total_num, total_acc / total_num * 100
 
 def main(argv=None):
     # Load Config
@@ -108,7 +47,8 @@ def main(argv=None):
     print(json.dumps(config, indent=2))
 
     # define SummaryWriter for tensorboard
-    writer = SummaryWriter(log_dir=config['tensorboard']['log_dir'] + '-' + str(datetime.datetime.now()))
+    log_dir = config['log']['log_dir'] + ';' + str(DATETIME).replace(' ', ';')
+    writer = SummaryWriter(log_dir=os.path.join(log_dir, 'tensorboard'))
     writer.add_text('config', json.dumps(config, indent=2))
 
     # define dataloader
@@ -160,16 +100,25 @@ def main(argv=None):
 
     # Mixed Precision
     amp_options = config['amp']
-    use_amp = 'amp' in sys.modules and amp_options['use_amp']
+    use_amp = ('apex' in sys.modules) and amp_options['use_amp']
     if use_amp:
         model, optimizer = amp.initialize(model, optimizer, opt_level=amp_options['opt_level'], num_losses=1)
     if model_options['dataparallel']:
         model = nn.DataParallel(model)
 
-
+    # for save params
+    save_options = config['log']
+    save_dir = os.path.join(log_dir, 'checkpoints')
+    os.mkdir(save_dir)
+    save_keys = ['model', 'optimizer']
+    save_target = [model, optimizer]
+    if use_amp:
+        save_keys.append('amp')
+        save_target.append(amp)
+    
 
     for e in range(1, config['train']['epoch'] + 1):
-        train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, amp=use_amp)
+        train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, use_amp=use_amp)
         writer.add_scalar('Train/Loss', train_loss, e)
         writer.add_scalar('Train/Accuracy', train_acc, e)
 
@@ -180,7 +129,12 @@ def main(argv=None):
         print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
         writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
         writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
+        
+        if e%save_options['save_interval'] == 0:
+            save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '.pth'))
 
+    if e%save_options['save_final']:
+        save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-final.pth'))
     writer.close()
 
 if __name__ == '__main__':

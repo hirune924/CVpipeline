@@ -30,8 +30,13 @@ train:
 amp:
     use_amp: True
     opt_level: O1
-tensorboard:
-    log_dir: logs/test
+log:
+    log_dir: logs/test 
+    save_name: test 
+    save_interval: 2
+    save_final: True
+    save_best_val: True
+    
 
 
 
