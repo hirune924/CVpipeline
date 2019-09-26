@@ -55,13 +55,13 @@ def main(argv=None):
     dataset_options = config['dataset']
     dataloader_options = config['dataloader']
     if dataset_options['mode'] == 'dali':
-       train_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
-                                          data_path = dataset_options['train_image_path'],
-                                          batch_size=dataloader_options['batch_size'], valid=False,
-                                          nfold=dataset_options['validation']['nfold']) 
-       valid_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
-                                          data_path = dataset_options['train_image_path'],
-                                          batch_size=dataloader_options['batch_size'], valid=True,
+        train_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
+                                           data_path = dataset_options['train_image_path'],
+                                           batch_size=dataloader_options['batch_size'], valid=False,
+                                           nfold=dataset_options['validation']['nfold']) 
+        valid_data_loader = DALIDataLoader(csv_path = dataset_options['train_csv_path'],
+                                           data_path = dataset_options['train_image_path'],
+                                           batch_size=dataloader_options['batch_size'], valid=True,
                                            nfold=dataset_options['validation']['nfold']) 
     else:
         train_data_loader, valid_data_loader = load_data(data_path=dataset_options['train_image_path'],
