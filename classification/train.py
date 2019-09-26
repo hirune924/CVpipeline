@@ -116,7 +116,7 @@ def main(argv=None):
         save_keys.append('amp')
         save_target.append(amp)
     
-
+    best_val_acc = 0
     for e in range(1, config['train']['epoch'] + 1):
         train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, use_amp=use_amp)
         writer.add_scalar('Train/Loss', train_loss, e)
@@ -130,10 +130,13 @@ def main(argv=None):
         writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
         writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
         
-        if e%save_options['save_interval'] == 0:
+        if best_val_acc < valid_acc and save_options['save_best_val'] and save_options['save_skip_epoch'] < e:
+            save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '-' + str(valid_acc) +'.pth'))
+            best_val_acc = valid_acc
+        elif e%save_options['save_interval'] == 0  and save_options['save_skip_epoch'] < e:
             save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '.pth'))
 
-    if e%save_options['save_final']:
+    if save_options['save_final']:
         save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-final.pth'))
     writer.close()
 

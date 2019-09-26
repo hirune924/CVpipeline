@@ -36,6 +36,8 @@ log:
     save_interval: 2
     save_final: True
     save_best_val: True
+    save_skip_epoch: 10
+
     
 
 

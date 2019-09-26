@@ -16,13 +16,13 @@ bash docker-run.sh
 - [x] lmdb
 - [x] add tensorboard( and watch visdom)
 - [x] add dataparallel
-- [ ] add data distribution data parallel
-- [ ] save model parameter
+- [x] save model parameter
+- [ ] add DataAugmentation
+- [ ] lr scheduler(optimize for model params)
 - [ ] error handling
 - [ ] logger
-- [ ] lr scheduler(optimize for model params)
-- [ ] grad cam
 - [ ] inference script(confusion matrix)
+- [ ] grad cam
 - [ ] add more criterion
 - [ ] add more method of validation split (adjust distribution)
 - [ ] add more metrics
@@ -30,4 +30,5 @@ bash docker-run.sh
 - [ ] add more models
 - [ ] RAPIDS
 - [ ] optuna, BoTorch
+- [ ] add data distribution data parallel
 
