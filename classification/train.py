@@ -93,7 +93,8 @@ def main(argv=None):
     opt_options = config['optimizer']
     opt_params = opt_options['opt_params']
     optimizer = get_optimizer_from_name(opt_name=opt_options['opt_name'], 
-                                        model=model, 
+                                        model=model,
+                                        target=opt_options['target'], 
                                         opt_params=opt_params)
 
     # define loss
