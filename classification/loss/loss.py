@@ -3,12 +3,8 @@
 
 import torch.nn as nn
 
-def get_loss_from_name(loss_name=None, **kwargs):
+def get_loss_from_name(loss_name=None, loss_params={}):
 
-    if loss_name == 'CrossEntropyLoss':
-        loss = nn.CrossEntropyLoss(**kwargs)
-    else:
-        print('{} is not implimented'.format(loss_name))
-        loss = None
+    loss = getattr(nn, loss_name)(**loss_params)
 
     return loss

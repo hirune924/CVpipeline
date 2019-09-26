@@ -94,13 +94,13 @@ def main(argv=None):
     opt_params = opt_options['opt_params']
     optimizer = get_optimizer_from_name(opt_name=opt_options['opt_name'], 
                                         model=model, 
-                                        **opt_params)
+                                        opt_params=opt_params)
 
     # define loss
     loss_options = config['loss']
     loss_params = loss_options['loss_params']
     loss_fn = get_loss_from_name(loss_name=loss_options['loss_name'],
-                                   **loss_params)
+                                 loss_params=loss_params)
 
     # Mixed Precision
     amp_options = config['amp']

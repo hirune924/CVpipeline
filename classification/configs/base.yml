@@ -37,7 +37,7 @@ amp:
     use_amp: True
     opt_level: O1
 optimizer:
-    opt_name: sgd
+    opt_name: SGD
     opt_params:
         lr: 0.1
         momentum: 0.9
