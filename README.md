@@ -11,6 +11,7 @@ cd CVpipeline
 bash docker-run.sh
 ``` 
 ## TODO
+- [ ] add custom entry-point
 - [ ] tensorboard clean config display
 - [ ] Docker tb-nightly pytorch-nightly alb(latest) 
 - [x] Apex
