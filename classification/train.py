@@ -50,7 +50,7 @@ def main(argv=None):
     # define SummaryWriter for tensorboard
     log_dir = config['log']['log_dir'] + ';' + str(DATETIME).replace(' ', ';')
     writer = SummaryWriter(log_dir=os.path.join(log_dir, 'tensorboard'))
-    writer.add_text('config', json.dumps(config, indent=2))
+    writer.add_text('config', json.dumps(config, indent=2).replace(' ', '&nbsp;').replace('\n', '  \n'))
 
     # define dataloader
     dataset_options = config['dataset']
