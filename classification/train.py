@@ -95,14 +95,17 @@ def main(argv=None):
     optimizer = get_optimizer_from_name(opt_name=opt_options['opt_name'], 
                                         model=model,
                                         target=opt_options['target'], 
-                                        opt_params=opt_params)
+                                        opt_params=opt_params,
+                                        mode=opt_options['mode'],
+                                        lib=opt_options['lib'])
 
     # define loss
     loss_options = config['loss']
     loss_params = loss_options['loss_params']
     loss_fn = get_loss_from_name(loss_name=loss_options['loss_name'],
-                                 loss_params=loss_params)
-
+                                 loss_params=loss_params,
+                                 mode=loss_options['mode'],
+                                 lib=loss_options['lib'])
     # Mixed Precision
     amp_options = config['amp']
     use_amp = ('apex' in sys.modules) and amp_options['use_amp']

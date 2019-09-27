@@ -3,8 +3,13 @@
 
 import torch.nn as nn
 
-def get_loss_from_name(loss_name=None, loss_params={}):
+def get_loss_from_name(loss_name=None, loss_params={}, mode='yaml', lib='torch'):
+    if lib=='torch':
+        lib = nn
 
-    loss = getattr(nn, loss_name)(**loss_params)
+    if mode == 'yaml':
+        loss = getattr(lib, loss_name)(**loss_params)
+    elif mode == 'custom':
+        loss = nn.CrossEntropyLoss()
 
     return loss

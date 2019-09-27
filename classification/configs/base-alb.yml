@@ -33,6 +33,8 @@ amp:
     use_amp: True
     opt_level: O1
 optimizer:
+    mode: yaml # str: ['yaml', 'custom']
+    lib: torch
     opt_name: SGD
     opt_params:
         lr: 0.1
@@ -41,19 +43,17 @@ optimizer:
         weight_decay: 0.0005
         nesterov: True
 loss:
+    mode: yaml # str: ['yaml', 'custom']
+    lib: torch
     loss_name: CrossEntropyLoss
     loss_params: {}
 train:
     epoch: 20
 log:
-    log_dir: logs/test 
-    save_name: test 
+    log_dir: logs/test
+    save_name: test
     save_interval: 2
     save_final: True
     save_best_val: True
     save_skip_epoch: 10
-
-    
-
-
 
