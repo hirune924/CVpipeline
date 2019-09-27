@@ -29,6 +29,7 @@ from dataset.dalidataset import DALIDataLoader
 from model.model import get_model_from_name
 from optimizer.optimizer import get_optimizer_from_name
 from loss.loss import get_loss_from_name
+from scheduler.scheduler import get_scheduler_from_name
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DATETIME = datetime.datetime.now()
@@ -98,7 +99,13 @@ def main(argv=None):
                                         opt_params=opt_params,
                                         mode=opt_options['mode'],
                                         lib=opt_options['lib'])
-
+    # define scheduler
+    scheduler_options = config['scheduler']
+    scheduler_params = scheduler_options['scheduler_params']
+    scheduler = get_scheduler_from_name(scheduler_name=scheduler_options['scheduler_name'], optimizer=optimizer,
+                                        scheduler_params=scheduler_params,
+                                        mode=scheduler_options['mode'],
+                                        lib=scheduler_options['lib'])
     # define loss
     loss_options = config['loss']
     loss_params = loss_options['loss_params']
@@ -135,6 +142,13 @@ def main(argv=None):
         valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
         writer.add_scalar('Validation/Loss', valid_loss, e)
         writer.add_scalar('Validation/Accuracy', valid_acc, e)
+
+        # Update Scheduler
+        scheduler.step()
+        lrs = {}
+        for idx, lr in enumerate(scheduler.get_lr()):
+            lrs['group_{}'.format(idx)] = lr
+        writer.add_scalars('LearningRate', lrs, e)
 
         # Summary
         print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
