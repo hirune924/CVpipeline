@@ -90,22 +90,7 @@ def main(argv=None):
     if 'torchsummary' in sys.modules:
         tsummary(model, tuple(image_size))
 
-    # define optimizer
-    opt_options = config['optimizer']
-    opt_params = opt_options['opt_params']
-    optimizer = get_optimizer_from_name(opt_name=opt_options['opt_name'], 
-                                        model=model,
-                                        target=opt_options['target'], 
-                                        opt_params=opt_params,
-                                        mode=opt_options['mode'],
-                                        lib=opt_options['lib'])
-    # define scheduler
-    scheduler_options = config['scheduler']
-    scheduler_params = scheduler_options['scheduler_params']
-    scheduler = get_scheduler_from_name(scheduler_name=scheduler_options['scheduler_name'], optimizer=optimizer,
-                                        scheduler_params=scheduler_params,
-                                        mode=scheduler_options['mode'],
-                                        lib=scheduler_options['lib'])
+
     # define loss
     loss_options = config['loss']
     loss_params = loss_options['loss_params']
@@ -113,56 +98,82 @@ def main(argv=None):
                                  loss_params=loss_params,
                                  mode=loss_options['mode'],
                                  lib=loss_options['lib'])
+    train_options = config['train']
+    optimizer_list = []
+    scheduler_list = []
+    for phase in range(len(train_options)):
+        # define optimizer
+        opt_options = train_options[phase]['optimizer']
+        opt_params = opt_options['opt_params']
+        optimizer_list.append(get_optimizer_from_name(opt_name=opt_options['opt_name'], 
+                                                      model=model,
+                                                      target=opt_options['target'], 
+                                                      opt_params=opt_params,
+                                                      mode=opt_options['mode'],
+                                                      lib=opt_options['lib']))
+        # define scheduler
+        scheduler_options = train_options[phase]['scheduler']
+        scheduler_params = scheduler_options['scheduler_params']
+        scheduler_list.append(get_scheduler_from_name(scheduler_name=scheduler_options['scheduler_name'], optimizer=optimizer_list[phase],
+                                                      scheduler_params=scheduler_params,
+                                                      mode=scheduler_options['mode'],
+                                                      lib=scheduler_options['lib']))
     # Mixed Precision
     amp_options = config['amp']
     use_amp = ('apex' in sys.modules) and amp_options['use_amp']
     if use_amp:
-        model, optimizer = amp.initialize(model, optimizer, opt_level=amp_options['opt_level'], num_losses=1)
+        model, optimizer_list = amp.initialize(model, optimizer_list, opt_level=amp_options['opt_level'], num_losses=1)
     if model_options['dataparallel']:
         model = nn.DataParallel(model)
+
 
     # for save params
     save_options = config['log']
     save_dir = os.path.join(log_dir, 'checkpoints')
     os.mkdir(save_dir)
-    save_keys = ['model', 'optimizer']
-    save_target = [model, optimizer]
+    save_keys = ['model']
+    save_target = [model]
     if use_amp:
         save_keys.append('amp')
         save_target.append(amp)
-    
-    best_val_acc = 0
-    for e in range(1, config['train']['epoch'] + 1):
-        # Training
-        train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer, use_amp=use_amp)
-        writer.add_scalar('Train/Loss', train_loss, e)
-        writer.add_scalar('Train/Accuracy', train_acc, e)
+    save_keys.append('optimizer')
 
-        # Validation
-        valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
-        writer.add_scalar('Validation/Loss', valid_loss, e)
-        writer.add_scalar('Validation/Accuracy', valid_acc, e)
-
-        # Update Scheduler
-        scheduler.step()
-        lrs = {}
-        for idx, lr in enumerate(scheduler.get_lr()):
-            lrs['group_{}'.format(idx)] = lr
-        writer.add_scalars('LearningRate', lrs, e)
-
-        # Summary
-        print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
-        writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
-        writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
+    global_epoch = 0
+    for phase in range(len(train_options)):
+        print('Start Train phase: {}'.format(phase)) 
         
-        if best_val_acc < valid_acc and save_options['save_best_val'] and save_options['save_skip_epoch'] < e:
-            save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '-' + str(valid_acc) +'.pth'))
-            best_val_acc = valid_acc
-        elif e%save_options['save_interval'] == 0  and save_options['save_skip_epoch'] < e:
-            save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '.pth'))
-
+        best_val_acc = 0
+        for e in range(global_epoch + 1, global_epoch + train_options[phase]['epoch'] + 1):
+            # Training
+            train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer_list[phase], use_amp=use_amp)
+            writer.add_scalar('Train/Loss', train_loss, e)
+            writer.add_scalar('Train/Accuracy', train_acc, e)
+    
+            # Validation
+            valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
+            writer.add_scalar('Validation/Loss', valid_loss, e)
+            writer.add_scalar('Validation/Accuracy', valid_acc, e)
+    
+            # Update Scheduler
+            scheduler_list[phase].step()
+            lrs = {}
+            for idx, lr in enumerate(scheduler_list[phase].get_lr()):
+                lrs['group_{}'.format(idx)] = lr
+            writer.add_scalars('LearningRate', lrs, e)
+    
+            # Summary
+            print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
+            writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
+            writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
+            
+            if best_val_acc < valid_acc and save_options['save_best_val'] and save_options['save_skip_epoch'] < e:
+                save_params(keys=save_keys, targets=save_target + [optimizer_list[phase]], save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '-' + str(valid_acc) +'.pth'))
+                best_val_acc = valid_acc
+            elif e%save_options['save_interval'] == 0  and save_options['save_skip_epoch'] < e:
+                save_params(keys=save_keys, targets=save_target + [optimizer_list[phase]], save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '.pth'))
+        global_epoch = global_epoch + train_options[phase]['epoch']     
     if save_options['save_final']:
-        save_params(keys=save_keys, targets=save_target, save_path=os.path.join(save_dir, save_options['save_name'] + '-final.pth'))
+        save_params(keys=save_keys, targets=save_target + [optimizer_list[-1]], save_path=os.path.join(save_dir, save_options['save_name'] + '-final.pth'))
     writer.close()
 
 if __name__ == '__main__':

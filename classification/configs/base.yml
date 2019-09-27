@@ -41,19 +41,31 @@ loss:
     lib: torch
     loss_name: CrossEntropyLoss
     loss_params: {}
-optimizer:
-    mode: yaml # str: ['yaml', 'custom']
-    lib: torch
-    opt_name: SGD
-    target: [{'params': fc}]
-    opt_params: {'lr': 0.1, 'momentum': 0.9, 'weight_decay': 0.0005, 'nesterov': True}
-scheduler:
-    mode: yaml # str: ['yaml', 'custom']
-    lib: torch
-    scheduler_name: MultiStepLR
-    scheduler_params: {'milestones': [5, 15], 'gamma': 0.1} 
 train:
-    epoch: 20
+    - epoch: 10
+      optimizer:
+          mode: yaml # str: ['yaml', 'custom']
+          lib: torch
+          opt_name: SGD
+          target: [{'params': fc}]
+          opt_params: {'lr': 0.1, 'momentum': 0.9, 'weight_decay': 0.0005, 'nesterov': True}
+      scheduler:
+          mode: yaml # str: ['yaml', 'custom']
+          lib: torch
+          scheduler_name: MultiStepLR
+          scheduler_params: {'milestones': [5], 'gamma': 0.1} 
+    - epoch: 20
+      optimizer:
+          mode: yaml # str: ['yaml', 'custom']
+          lib: torch
+          opt_name: SGD
+          target: []
+          opt_params: {'lr': 0.01, 'momentum': 0.9, 'weight_decay': 0.0005, 'nesterov': True}
+      scheduler:
+          mode: yaml # str: ['yaml', 'custom']
+          lib: torch
+          scheduler_name: MultiStepLR
+          scheduler_params: {'milestones': [5, 15], 'gamma': 0.1} 
 log:
     log_dir: logs/test 
     save_name: test 
