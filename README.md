@@ -12,6 +12,8 @@ bash docker-run.sh
 ``` 
 ## TODO
 - [ ] add custom entry-point
+- [ ] yaml check
+- [ ] restart 
 - [ ] tensorboard clean config display
 - [ ] Docker tb-nightly pytorch-nightly alb(latest) 
 - [x] Apex
@@ -21,7 +23,7 @@ bash docker-run.sh
 - [x] add dataparallel
 - [x] save model parameter
 - [x] add DataAugmentation
-- [ ] lr scheduler(optimize for model params)
+- [x] lr scheduler(optimize for model params)
 - [ ] error handling
 - [ ] logger
 - [ ] inference script(confusion matrix)

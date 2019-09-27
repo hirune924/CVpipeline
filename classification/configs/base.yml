@@ -60,12 +60,12 @@ train:
           lib: torch
           opt_name: SGD
           target: []
-          opt_params: {'lr': 0.01, 'momentum': 0.9, 'weight_decay': 0.0005, 'nesterov': True}
+          opt_params: {'lr': 0.0001, 'momentum': 0.9, 'weight_decay': 0.0005, 'nesterov': True}
       scheduler:
           mode: yaml # str: ['yaml', 'custom']
-          lib: torch
-          scheduler_name: MultiStepLR
-          scheduler_params: {'milestones': [5, 15], 'gamma': 0.1} 
+          lib: custom
+          scheduler_name: GradualWarmupCosineAnnealingLR
+          scheduler_params: {'multiplier': 100, 'total_epoch': 5, 'T_max': 20} 
 log:
     log_dir: logs/test 
     save_name: test 
