@@ -13,7 +13,7 @@ bash docker-run.sh
 ## TODO
 - [x] add custom entry-point
 - [ ] yaml check
-- [ ] restart 
+- [x] restart 
 - [ ] clean source code PEP8
 - [ ] tensorboard clean config display
 - [ ] Docker tb-nightly pytorch-nightly alb(latest) 

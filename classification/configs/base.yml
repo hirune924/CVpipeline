@@ -33,8 +33,8 @@ model:
     num_classes: 120
     pretrained: True
     dataparallel: True
-    restart: [model, optimizer, amp]
-    checkpoint: 
+    restart: [model, amp]  #[model, optimizer, amp]
+    checkpoint: logs/test;2019-09-27;07:19:35.265723/checkpoints/test-final.pth
 amp:
     use_amp: True
     opt_level: O1
@@ -79,8 +79,4 @@ log:
     save_best_val: True
     save_best_target: AccuracyScore
     save_skip_epoch: 10
-
-    
-
-
 

@@ -131,6 +131,14 @@ def main(argv=None):
     if model_options['dataparallel']:
         model = nn.DataParallel(model)
 
+    # for Restart
+    checkpoint = torch.load(model_options['checkpoint'])
+    if 'model' in model_options['restart']:
+        model.load_state_dict(checkpoint['model'])
+    if 'optimizer' in model_options['restart']:
+        optimizer_list[0].load_state_dict(checkpoint['optimizer'])
+    if 'amp' in model_options['restart']:
+        amp.load_state_dict(checkpoint['amp'])
 
     # for save params
     save_options = config['log']
