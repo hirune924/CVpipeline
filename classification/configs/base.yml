@@ -33,6 +33,8 @@ model:
     num_classes: 120
     pretrained: True
     dataparallel: True
+    restart: [model, optimizer, amp]
+    checkpoint: 
 amp:
     use_amp: True
     opt_level: O1
