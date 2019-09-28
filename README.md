@@ -18,6 +18,7 @@ bash docker-run.sh
 - [ ] tensorboard clean config display
 - [ ] Docker tb-nightly pytorch-nightly alb(latest) 
 - [x] Apex
+- [x] add flexible metric
 - [x] DALI (Limited function version)
 - [x] lmdb
 - [x] add tensorboard( and watch visdom)

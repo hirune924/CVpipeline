@@ -41,6 +41,9 @@ loss:
     lib: torch
     loss_name: CrossEntropyLoss
     loss_params: {}
+metric:
+    - metric_name: AccuracyScore
+      metric_params: {}
 train:
     - epoch: 10
       optimizer:
@@ -72,6 +75,7 @@ log:
     save_interval: 2
     save_final: True
     save_best_val: True
+    save_best_target: AccuracyScore
     save_skip_epoch: 10
 
     

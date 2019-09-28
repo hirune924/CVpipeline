@@ -23,13 +23,14 @@ try:
 except ImportError:
     print('[WARNING] {} module is not installed'.format('apex'))
 
-from functions import train_loop, valid_loop, save_params
+from functions import train_loop, valid_loop, save_params, print_save_scores, print_save_scores_summary
 from dataset.dataset import load_data
 from dataset.dalidataset import DALIDataLoader
 from model.model import get_model_from_name
 from optimizer.optimizer import get_optimizer_from_name
 from loss.loss import get_loss_from_name
 from scheduler.scheduler import get_scheduler_from_name
+from metric.metric import get_metrics 
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 DATETIME = datetime.datetime.now()
@@ -98,6 +99,10 @@ def main(argv=None):
                                  loss_params=loss_params,
                                  mode=loss_options['mode'],
                                  lib=loss_options['lib'])
+
+    # define metric
+    metric_dict = get_metrics(config['metric'])
+
     train_options = config['train']
     optimizer_list = []
     scheduler_list = []
@@ -139,20 +144,18 @@ def main(argv=None):
     save_keys.append('optimizer')
 
     global_epoch = 0
+    best_val_score = 0
     for phase in range(len(train_options)):
         print('Start Train phase: {}'.format(phase)) 
         
-        best_val_acc = 0
         for e in range(global_epoch + 1, global_epoch + train_options[phase]['epoch'] + 1):
             # Training
-            train_loss, train_acc = train_loop(model, train_data_loader, loss_fn, optimizer_list[phase], use_amp=use_amp)
-            writer.add_scalar('Train/Loss', train_loss, e)
-            writer.add_scalar('Train/Accuracy', train_acc, e)
+            train_scores = train_loop(model, train_data_loader, loss_fn, optimizer_list[phase], metric_dict=metric_dict, use_amp=use_amp)
+            print_save_scores(train_scores, e, 'Train', writer, display=False)
     
             # Validation
-            valid_loss, valid_acc = valid_loop(model, valid_data_loader, loss_fn)
-            writer.add_scalar('Validation/Loss', valid_loss, e)
-            writer.add_scalar('Validation/Accuracy', valid_acc, e)
+            valid_scores = valid_loop(model, valid_data_loader, loss_fn, metric_dict=metric_dict)
+            print_save_scores(valid_scores, e, 'Valid', writer, display=False)
     
             # Update Scheduler
             scheduler_list[phase].step()
@@ -162,15 +165,15 @@ def main(argv=None):
             writer.add_scalars('LearningRate', lrs, e)
     
             # Summary
-            print('Epoch: {}, Train Loss: {:.4f}, Train Accuracy: {:.2f}, Valid Loss: {:.4f}, Valid Accuracy: {:.2f}'.format(e, train_loss, train_acc, valid_loss, valid_acc))
-            writer.add_scalars('Summary/Loss', {'train_loss': train_loss, 'valid_loss': valid_loss}, e)
-            writer.add_scalars('Summary/Accuracy', {'train_acc': train_acc, 'valid_acc': valid_acc}, e)
-            
-            if best_val_acc < valid_acc and save_options['save_best_val'] and save_options['save_skip_epoch'] < e:
-                save_params(keys=save_keys, targets=save_target + [optimizer_list[phase]], save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '-' + str(valid_acc) +'.pth'))
-                best_val_acc = valid_acc
+            print_save_scores_summary(train_scores, valid_scores, e, writer, display=True)
+
+            # Save Params
+            if best_val_score < valid_scores[save_options['save_best_target']] and save_options['save_best_val'] and save_options['save_skip_epoch'] < e:
+                best_val_score = valid_scores[save_options['save_best_target']]
+                save_params(keys=save_keys, targets=save_target + [optimizer_list[phase]], save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '-' + str(best_val_score) +'.pth'))
             elif e%save_options['save_interval'] == 0  and save_options['save_skip_epoch'] < e:
                 save_params(keys=save_keys, targets=save_target + [optimizer_list[phase]], save_path=os.path.join(save_dir, save_options['save_name'] + '-' +  str(e) + '.pth'))
+
         global_epoch = global_epoch + train_options[phase]['epoch']     
     if save_options['save_final']:
         save_params(keys=save_keys, targets=save_target + [optimizer_list[-1]], save_path=os.path.join(save_dir, save_options['save_name'] + '-final.pth'))
